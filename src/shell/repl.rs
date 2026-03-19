@@ -1,3 +1,5 @@
+use crate::shell::parser;
+use crate::shell::dispatcher;
 
 
 pub fn start() {
@@ -5,6 +7,7 @@ pub fn start() {
     let green = "\x1b[32m";
     let yellow = "\x1b[33m";
     let bold = "\x1b[1m";
+    let red = "\x1b[31m";
     let reset = "\x1b[0m";
     
     println!("{}{}",bold, cyan);
@@ -16,7 +19,6 @@ pub fn start() {
     println!("   ╚═════╝        ╚══════╝╚═╝  ╚═╝╚══════╝╚══════╝╚══════╝");
     println!();
     println!();
-
 
     
     
@@ -32,6 +34,16 @@ pub fn start() {
             continue;
         }
         
-        // TODO: parse and execute command
+        // Parse the input
+        match parser::parse(input) {
+            Ok(cmd) => {
+                // Dispatch to the right command
+                match dispatcher::dispatch(cmd) {
+                    Ok(_) => {},
+                    Err(e) => println!("{}Error: {}{}", red, e, reset),
+                }
+            }
+            Err(e) => println!("{}Error: {}{}", red, e, reset),
+        }
     }
 }
