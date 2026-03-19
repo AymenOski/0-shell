@@ -1,6 +1,7 @@
 use crate::shell::parser::Command;
 use crate::CommandError;
 use crate::builtins;
+use crate::builtins::Command as CommandTrait;
 
 pub fn dispatch(cmd: Command) -> Result<(), CommandError> {
     // Convert Vec<String> to Vec<&str> for the execute function

@@ -1,5 +1,5 @@
-mod shell;
+use shell::shell::repl;
 
 fn main() {
-    shell::repl::start();
+    repl::start();
 }

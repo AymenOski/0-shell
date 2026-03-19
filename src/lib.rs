@@ -1,5 +1,5 @@
-mod shell;
-mod builtins;
+pub mod shell;
+pub mod builtins;
 
 pub enum CommandError {
     FileNotFound(String),
