@@ -1,11 +1,18 @@
 use crate::CommandError;
 use super::Command;
+use crate::shell::state::ShellState;
 
 pub struct Echo;
 
 impl Command for Echo {
-    fn execute(args: &[&str]) -> Result<(), CommandError> {
-        unimplemented!("Implement echo command")
+    fn execute(args: &[&str], _state: &mut ShellState) -> Result<(), CommandError> {
+        // Join all arguments with spaces and print them
+        if args.is_empty() {
+            println!();
+        } else {
+            println!("{}", args.join(" "));
+        }
+        Ok(())
     }
     
     fn name() -> &'static str {
@@ -16,7 +23,8 @@ impl Command for Echo {
         "echo: print text to stdout"
     }
     
-    fn validate_args(args: &[&str]) -> bool {
-        !args.is_empty()
+    fn validate_args(_args: &[&str]) -> bool {
+        // echo never fails due to arguments - it accepts 0 or more
+        true
     }
 }

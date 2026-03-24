@@ -1,8 +1,9 @@
 use crate::CommandError;
+use crate::shell::state::ShellState;
 
 // Blueprint - contract for all builtin commands
 pub trait Command {
-    fn execute(args: &[&str]) -> Result<(), CommandError>;
+    fn execute(args: &[&str], state: &mut ShellState) -> Result<(), CommandError>;
     
     fn name() -> &'static str;
     fn help() -> &'static str;

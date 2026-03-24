@@ -1,10 +1,11 @@
 use crate::CommandError;
 use super::Command;
+use crate::shell::state::ShellState;
 
 pub struct Exit;
 
 impl Command for Exit {
-    fn execute(args: &[&str]) -> Result<(), CommandError> {
+    fn execute(_args: &[&str], _state: &mut ShellState) -> Result<(), CommandError> {
         unimplemented!("Implement exit command")
     }
     
@@ -16,7 +17,7 @@ impl Command for Exit {
         "exit: exit the shell"
     }
     
-    fn validate_args(args: &[&str]) -> bool {
+    fn validate_args(_args: &[&str]) -> bool {
         true
     }
 }

@@ -1,10 +1,11 @@
 use crate::CommandError;
 use super::Command;
+use crate::shell::state::ShellState;
 
 pub struct Mv;
 
 impl Command for Mv {
-    fn execute(args: &[&str]) -> Result<(), CommandError> {
+    fn execute(_args: &[&str], _state: &mut ShellState) -> Result<(), CommandError> {
         unimplemented!("Implement mv command")
     }
     
@@ -16,7 +17,7 @@ impl Command for Mv {
         "mv: move or rename files"
     }
     
-    fn validate_args(args: &[&str]) -> bool {
-        args.len() >= 2
+    fn validate_args(_args: &[&str]) -> bool {
+        _args.len() >= 2
     }
 }

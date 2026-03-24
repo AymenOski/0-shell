@@ -1,10 +1,11 @@
 use crate::CommandError;
 use super::Command;
+use crate::shell::state::ShellState;
 
 pub struct Ls;
 
 impl Command for Ls {
-    fn execute(args: &[&str]) -> Result<(), CommandError> {
+    fn execute(_args: &[&str], _state: &mut ShellState) -> Result<(), CommandError> {
         unimplemented!("Implement ls command")
     }
     
@@ -16,7 +17,7 @@ impl Command for Ls {
         "ls: list directory contents"
     }
     
-    fn validate_args(args: &[&str]) -> bool {
+    fn validate_args(_args: &[&str]) -> bool {
         true
     }
 }
