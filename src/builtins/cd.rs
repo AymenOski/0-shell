@@ -10,8 +10,29 @@ impl Command for Cd {
         // Get the target directory from args
         let target = args[0];
         
-        // Convert to PathBuf
-        let target_path = if target.starts_with('/') {
+        // Handle special cases before path building
+        let target_path = if target == "-" {
+            // Go to previous directory (cd -)
+            // Check if we have a previous directory stored
+            state.previous_dir.clone()
+                .ok_or(CommandError::InvalidArgs("No previous directory".to_string()))?
+        } else if target.starts_with('~') {
+            // Expand ~ to home directory
+            let home = std::env::var("HOME")
+                .ok()
+                .map(PathBuf::from)
+                .ok_or(CommandError::InvalidArgs("Could not determine home directory".to_string()))?;
+            
+            if target == "~" {
+                // Just ~ means home
+                home
+            } else if target.starts_with("~/") {
+                // ~/ means home + rest of path
+                home.join(&target[2..])
+            } else {
+                return Err(CommandError::InvalidArgs(format!("Invalid path: {}", target)));
+            }
+        } else if target.starts_with('/') {
             // Absolute path
             PathBuf::from(target)
         } else {
@@ -19,23 +40,26 @@ impl Command for Cd {
             state.current_dir.join(target)
         };
         
-        // Check if directory exists
-        if !target_path.exists() {
-            return Err(CommandError::FileNotFound(format!("{}", target_path.display())));
-        }
+        // Canonicalize the path to resolve .. and .
+        // This converts /home/user/target/.. into /home/user (resolved)
+        let canonical_path = target_path.canonicalize()
+            .map_err(|e| CommandError::IOError(format!("Could not resolve path: {}", e)))?;
         
         // Check if it's actually a directory
-        if !target_path.is_dir() {
-            return Err(CommandError::InvalidArgs(format!("{} is not a directory", target)));
+        if !canonical_path.is_dir() {
+            return Err(CommandError::InvalidArgs(format!("{} is not a directory", canonical_path.display())));
         }
         
+        // **Store the current directory before changing** (for cd -)
+        let previous_dir = state.current_dir.clone();
+        
         // Tell the OS to actually change the working directory
-        std::env::set_current_dir(&target_path)
+        std::env::set_current_dir(&canonical_path)
             .map_err(|e| CommandError::IOError(e.to_string()))?;
         
-        // Update our state to track the current directory
-        // We do this AFTER set_current_dir succeeds, so both are in sync
-        state.current_dir = target_path;
+        // Update our state to track both current and previous directory
+        state.previous_dir = Some(previous_dir);
+        state.current_dir = canonical_path;
         Ok(())
     }
     
