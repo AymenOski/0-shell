@@ -17,7 +17,8 @@ impl Command for Exit {
         "exit: exit the shell"
     }
     
-    fn validate_args(_args: &[&str]) -> bool {
-        true
+    fn validate_args(args: &[&str]) -> bool {
+        // exit takes no arguments
+        args.is_empty()
     }
 }

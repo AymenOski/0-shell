@@ -75,8 +75,9 @@ impl Command for Cd {
         "cd: change directory"
     }
     
-    fn validate_args(_args: &[&str]) -> bool {
-        // Allow any number of arguments (0 for home, 1+ for specific path)
-        true
+    fn validate_args(args: &[&str]) -> bool {
+        // cd accepts 0 args (go to home) or 1 arg (go to specific path)
+        // Reject 2+ args: "cd /tmp /home" is invalid
+        args.len() <= 1
     }
 }

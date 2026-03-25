@@ -18,7 +18,7 @@ impl Command for Pwd {
         "pwd: print working directory"
     }
     
-    fn validate_args(_args: &[&str]) -> bool {
-        true
+    fn validate_args(args: &[&str]) -> bool {
+        args.is_empty()
     }
 }
