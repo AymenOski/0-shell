@@ -6,7 +6,7 @@ pub struct Exit;
 
 impl Command for Exit {
     fn execute(_args: &[&str], _state: &mut ShellState) -> Result<(), CommandError> {
-        unimplemented!("Implement exit command")
+        std::process::exit(0);
     }
     
     fn name() -> &'static str {

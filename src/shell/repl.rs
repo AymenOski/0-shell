@@ -35,7 +35,18 @@ pub fn start() {
         std::io::Write::flush(&mut std::io::stdout()).unwrap();
         
         let mut input = String::new();
-        std::io::stdin().read_line(&mut input).unwrap();
+        // read_line returns Ok(0) on EOF (Ctrl+D)
+        match std::io::stdin().read_line(&mut input) {
+            Ok(0) => { // nothing read = EOF
+                println!();  // Print newline after Ctrl+D
+                break;
+            }
+            Ok(_) => {}  // Normal input
+            Err(e) => {
+                eprintln!("{}Error reading input: {}{}", red, e, reset);
+                break;
+            }
+        }
         
         let input = input.trim();
         if input.is_empty() {

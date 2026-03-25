@@ -7,8 +7,12 @@ pub struct Cd;
 
 impl Command for Cd {
     fn execute(args: &[&str], state: &mut ShellState) -> Result<(), CommandError> {
-        // Get the target directory from args
-        let target = args[0];
+        // If no arguments, default to HOME
+        let target = if args.is_empty() {
+            "~"  // Default to home directory
+        } else {
+            args[0]
+        };
         
         // Handle special cases before path building
         let target_path = if target == "-" {
@@ -71,7 +75,8 @@ impl Command for Cd {
         "cd: change directory"
     }
     
-    fn validate_args(args: &[&str]) -> bool {
-        !args.is_empty()
+    fn validate_args(_args: &[&str]) -> bool {
+        // Allow any number of arguments (0 for home, 1+ for specific path)
+        true
     }
 }
