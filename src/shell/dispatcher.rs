@@ -69,6 +69,6 @@ pub fn dispatch(cmd: Command, state: &mut ShellState) -> Result<(), CommandError
             }
             builtins::rm::Rm::execute(&args, state)
         }
-        _ => Err(CommandError::InvalidArgs(format!("Command '{}' not found", cmd.name))),
+        _ => Err(CommandError::CommandNotFound(cmd.name.clone())),
     }
 }

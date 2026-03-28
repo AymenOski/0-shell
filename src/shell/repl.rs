@@ -59,6 +59,9 @@ pub fn start() {
                 // Dispatch to the right command
                 match dispatcher::dispatch(cmd, &mut state) {
                     Ok(_) => {},
+                    Err(crate::CommandError::CommandNotFound(name)) => {
+                        println!("{}Command '{}' not found{}", red, name, reset);
+                    }
                     Err(e) => println!("{}Error: {}{}", red, e, reset),
                 }
             }

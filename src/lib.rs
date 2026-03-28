@@ -6,6 +6,7 @@ pub enum CommandError {
     PermissionDenied(String),
     InvalidArgs(String),
     IOError(String),
+    CommandNotFound(String),
 }
 
 impl std::fmt::Display for CommandError {
@@ -15,6 +16,7 @@ impl std::fmt::Display for CommandError {
             CommandError::PermissionDenied(s) => write!(f, "Permission denied: {}", s),
             CommandError::InvalidArgs(s) => write!(f, "Invalid arguments: {}", s),
             CommandError::IOError(s) => write!(f, "IO error: {}", s),
+            CommandError::CommandNotFound(s) => write!(f, "Command '{}' not found", s),
         }
     }
 }
