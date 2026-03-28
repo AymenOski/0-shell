@@ -35,26 +35,68 @@ pub fn start() {
         std::io::Write::flush(&mut std::io::stdout()).unwrap();
         
         let mut input = String::new();
-        // read_line returns Ok(0) on EOF (Ctrl+D)
+        
+        // Read the first line
         match std::io::stdin().read_line(&mut input) {
-            Ok(0) => { // nothing read = EOF
-                println!();  // Print newline after Ctrl+D
+            Ok(0) => { // EOF (Ctrl+D)
+                println!();
                 break;
             }
-            Ok(_) => {}  // Normal input
+            Ok(_) => {}
             Err(e) => {
                 eprintln!("{}Error reading input: {}{}", red, e, reset);
                 break;
             }
         }
         
-        let input = input.trim();
-        if input.is_empty() {
+        // If input is just whitespace, skip
+        if input.trim().is_empty() {
+            continue;
+        }
+        
+        // Keep reading lines if quotes are unclosed
+        loop {
+            let (has_unclosed, quote_char) = parser::has_unclosed_quotes(&input);
+            
+            if !has_unclosed {
+                // Quotes are closed, break and execute
+                break;
+            }
+            
+            // Show continuation prompt based on which quote is unclosed
+            let prompt_char = match quote_char {
+                Some('"') => "dquote",
+                Some('\'') => "squote",
+                _ => "cont",
+            };
+            print!("{}{}{} ", cyan, prompt_char, reset);
+            std::io::Write::flush(&mut std::io::stdout()).unwrap();
+            
+            // Read the next line
+            match std::io::stdin().read_line(&mut input) {
+                Ok(0) => {
+                    // EOF before closing quote
+                    println!();
+                    eprintln!("{}Error: Unexpected EOF in quoted string{}", red, reset);
+                    input.clear();
+                    break;
+                }
+                Ok(_) => {}
+                Err(e) => {
+                    eprintln!("{}Error reading input: {}{}", red, e, reset);
+                    input.clear();
+                    break;
+                }
+            }
+        }
+        
+        let trimmed_input = input.trim();
+        if trimmed_input.is_empty() {
             continue;
         }
         
         // Parse the input
-        match parser::parse(input) {
+        match parser::parse(trimmed_input) {
             Ok(cmd) => {
                 // Dispatch to the right command
                 match dispatcher::dispatch(cmd, &mut state) {
