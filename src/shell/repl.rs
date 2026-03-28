@@ -107,6 +107,12 @@ pub fn start() {
                     Err(crate::CommandError::IsADirectory(path)) => {
                         println!("{}cat: {}: Is a directory{}", red, path, reset);
                     }
+                    Err(crate::CommandError::PermissionDenied(path)) => {
+                        println!("{}cat: {}: Permission denied{}", red, path, reset);
+                    }
+                    Err(crate::CommandError::FileNotFound(path)) => {
+                        println!("{}cat: {}: No such file or directory{}", red, path, reset);
+                    }
                     Err(e) => println!("{}Error: {}{}", red, e, reset),
                 }
             }
