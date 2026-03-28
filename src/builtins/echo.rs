@@ -32,7 +32,7 @@ impl Command for Echo {
     }
 }
 
-/// Interpret escape sequences: \n, \t, \\
+// Interpret escape sequences: \n, \t, \\
 fn unescape(s: &str) -> String {
     let mut result = String::new();
     let mut chars = s.chars().peekable();

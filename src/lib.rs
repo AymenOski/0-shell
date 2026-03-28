@@ -7,6 +7,7 @@ pub enum CommandError {
     InvalidArgs(String),
     IOError(String),
     CommandNotFound(String),
+    IsADirectory(String),
 }
 
 impl std::fmt::Display for CommandError {
@@ -17,6 +18,7 @@ impl std::fmt::Display for CommandError {
             CommandError::InvalidArgs(s) => write!(f, "Invalid arguments: {}", s),
             CommandError::IOError(s) => write!(f, "IO error: {}", s),
             CommandError::CommandNotFound(s) => write!(f, "Command '{}' not found", s),
+            CommandError::IsADirectory(s) => write!(f, "Is a directory: {}", s),
         }
     }
 }

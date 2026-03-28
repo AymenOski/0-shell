@@ -104,6 +104,9 @@ pub fn start() {
                     Err(crate::CommandError::CommandNotFound(name)) => {
                         println!("{}Command '{}' not found{}", red, name, reset);
                     }
+                    Err(crate::CommandError::IsADirectory(path)) => {
+                        println!("{}cat: {}: Is a directory{}", red, path, reset);
+                    }
                     Err(e) => println!("{}Error: {}{}", red, e, reset),
                 }
             }
