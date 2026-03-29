@@ -8,6 +8,7 @@ pub enum CommandError {
     IOError(String),
     CommandNotFound(String),
     IsADirectory(String),
+    FileOperationFailed(String),
 }
 
 impl std::fmt::Display for CommandError {
@@ -19,6 +20,7 @@ impl std::fmt::Display for CommandError {
             CommandError::IOError(s) => write!(f, "IO error: {}", s),
             CommandError::CommandNotFound(s) => write!(f, "Command '{}' not found", s),
             CommandError::IsADirectory(s) => write!(f, "Is a directory: {}", s),
+            CommandError::FileOperationFailed(s) => write!(f, "{}", s),  // No prefix
         }
     }
 }

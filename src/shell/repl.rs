@@ -113,6 +113,9 @@ pub fn start() {
                     Err(crate::CommandError::FileNotFound(path)) => {
                         println!("{}cat: {}: No such file or directory{}", red, path, reset);
                     }
+                    Err(crate::CommandError::FileOperationFailed(msg)) => {
+                        println!("{}{}{}", red, msg, reset);
+                    }
                     Err(e) => println!("{}Error: {}{}", red, e, reset),
                 }
             }
