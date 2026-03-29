@@ -8,6 +8,13 @@ pub struct Cp;
 
 impl Command for Cp {
     fn execute(args: &[&str], state: &mut ShellState) -> Result<(), CommandError> {
+        if args.is_empty() {
+            return Err(CommandError::InvalidArgs("missing file operand".to_string()));
+        }
+        if args.len() == 1 {
+            return Err(CommandError::InvalidArgs(format!("missing destination file operand after '{}'", args[0])));
+        }
+
         let src_name = args[0];
         let dest_name = args[1];
         
@@ -35,10 +42,6 @@ impl Command for Cp {
     
     fn help() -> &'static str {
         "cp: copy files"
-    }
-    
-    fn validate_args(args: &[&str]) -> bool {
-        args.len() >= 2
     }
 }
 
@@ -69,7 +72,7 @@ fn resolve_path(file_name: &str, state: &ShellState) -> Result<PathBuf, CommandE
 fn io_error_to_cmd_error(src_name: &str, dest_name: &str, _src: &PathBuf, _dest: &PathBuf, e: std::io::Error) -> CommandError {
     match e.kind() {
         std::io::ErrorKind::NotFound => {
-            CommandError::FileNotFound(src_name.to_string())
+            CommandError::FileOperationFailed(format!("cannot stat '{}': No such file or directory", src_name))
         }
         std::io::ErrorKind::PermissionDenied => {
             CommandError::PermissionDenied(src_name.to_string())

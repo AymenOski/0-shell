@@ -2,12 +2,24 @@ use crate::CommandError;
 use super::Command;
 use crate::shell::state::ShellState;
 use std::fs;
+use std::io::{self, BufRead};
 use std::path::PathBuf;
 
 pub struct Cat;
 
 impl Command for Cat {
     fn execute(args: &[&str], state: &mut ShellState) -> Result<(), CommandError> {
+        if args.is_empty() {
+            let stdin = io::stdin();
+            for line in stdin.lock().lines() {
+                match line {
+                    Ok(l) => println!("{}", l),
+                    Err(e) => return Err(CommandError::IOError(e.to_string())),
+                }
+            }
+            return Ok(());
+        }
+
         let mut i = 0;
         // Loop through each file argument
         for file_path in args {
@@ -34,10 +46,6 @@ impl Command for Cat {
     
     fn help() -> &'static str {
         "cat: display file contents"
-    }
-    
-    fn validate_args(_args: &[&str]) -> bool {
-        !_args.is_empty()
     }
 }
 

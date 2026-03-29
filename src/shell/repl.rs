@@ -8,7 +8,6 @@ pub fn start() {
     let _green = "\x1b[32m";
     let _yellow = "\x1b[33m";
     let bold = "\x1b[1m";
-    let red = "\x1b[31m";
     let reset = "\x1b[0m";
     
     println!("{}{}",bold, cyan);
@@ -25,7 +24,7 @@ pub fn start() {
     let mut state = match ShellState::new() {
         Ok(s) => s,
         Err(e) => {
-            eprintln!("{}Error: Failed to initialize shell: {}{}", red, e, reset);
+            eprintln!("Error: Failed to initialize shell: {}", e);
             return;
         }
     };
@@ -44,7 +43,7 @@ pub fn start() {
             }
             Ok(_) => {}
             Err(e) => {
-                eprintln!("{}Error reading input: {}{}", red, e, reset);
+                eprintln!("Error reading input: {}", e);
                 break;
             }
         }
@@ -77,13 +76,13 @@ pub fn start() {
                 Ok(0) => {
                     // EOF before closing quote
                     println!();
-                    eprintln!("{}Error: Unexpected EOF in quoted string{}", red, reset);
+                    eprintln!("Error: Unexpected EOF in quoted string");
                     input.clear();
                     break;
                 }
                 Ok(_) => {}
                 Err(e) => {
-                    eprintln!("{}Error reading input: {}{}", red, e, reset);
+                    eprintln!("Error reading input: {}", e);
                     input.clear();
                     break;
                 }
@@ -103,30 +102,35 @@ pub fn start() {
                 match dispatcher::dispatch(cmd, &mut state) {
                     Ok(_) => {},
                     Err(crate::CommandError::CommandNotFound(name)) => {
-                        println!("{}Command '{}' not found{}", red, name, reset);
+                        println!("Command '{}' not found", name);
                     }
                     Err(crate::CommandError::FileNotFound(path)) => {
-                        println!("{}{}: {}: No such file or directory{}", red, cmd_name, path, reset);
+                        println!("{}: {}: No such file or directory", cmd_name, path);
                     }
                     Err(crate::CommandError::PermissionDenied(path)) => {
-                        println!("{}{}: {}: Permission denied{}", red, cmd_name, path, reset);
+                        println!("{}: {}: Permission denied", cmd_name, path);
                     }
                     Err(crate::CommandError::IsADirectory(path)) => {
-                        println!("{}{}: {}: Is a directory{}", red, cmd_name, path, reset);
+                        println!("{}: {}: Is a directory", cmd_name, path);
                     }
                     Err(crate::CommandError::NotADirectory(path)) => {
-                        println!("{}{}: {}: Not a directory{}", red, cmd_name, path, reset);
+                        println!("{}: {}: Not a directory", cmd_name, path);
                     }
                     Err(crate::CommandError::AlreadyExists(path)) => {
-                        println!("{}{}: cannot create directory '{}': File exists{}", red, cmd_name, path, reset);
+                        println!("{}: cannot create directory '{}': File exists", cmd_name, path);
                     }
                     Err(crate::CommandError::FileOperationFailed(msg)) => {
-                        println!("{}{}: {}{}", red, cmd_name, msg, reset);
+                        println!("{}: {}", cmd_name, msg);
                     }
-                    Err(e) => println!("{}Error: {}{}", red, e, reset),
+                    Err(crate::CommandError::IOError(msg)) => {
+                        println!("{}: {}", cmd_name, msg);
+                    }
+                    Err(crate::CommandError::InvalidArgs(msg)) => {
+                        println!("{}: {}", cmd_name, msg);
+                    }
                 }
             }
-            Err(e) => println!("{}Error: {}{}", red, e, reset),
+            Err(e) => println!("Error: {}", e),
         }
     }
 }

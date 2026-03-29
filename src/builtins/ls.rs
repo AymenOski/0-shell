@@ -16,8 +16,4 @@ impl Command for Ls {
     fn help() -> &'static str {
         "ls: list directory contents"
     }
-    
-    fn validate_args(_args: &[&str]) -> bool {
-        true
-    }
 }

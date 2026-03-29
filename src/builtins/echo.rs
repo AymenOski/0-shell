@@ -25,11 +25,6 @@ impl Command for Echo {
     fn help() -> &'static str {
         "echo: print text to stdout"
     }
-    
-    fn validate_args(_args: &[&str]) -> bool {
-        // echo never fails due to arguments - it accepts 0 or more
-        true
-    }
 }
 
 // Interpret escape sequences: \n, \t, \\

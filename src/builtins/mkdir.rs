@@ -8,6 +8,10 @@ pub struct Mkdir;
 
 impl Command for Mkdir {
     fn execute(args: &[&str], state: &mut ShellState) -> Result<(), CommandError> {
+        if args.is_empty() {
+            return Err(CommandError::InvalidArgs("missing operand".to_string()));
+        }
+
         // Loop through each directory to create
         for dir_name in args {
             let path = resolve_path(dir_name, state)?;
@@ -27,10 +31,6 @@ impl Command for Mkdir {
     
     fn help() -> &'static str {
         "mkdir: create directories"
-    }
-    
-    fn validate_args(_args: &[&str]) -> bool {
-        !_args.is_empty()
     }
 }
 

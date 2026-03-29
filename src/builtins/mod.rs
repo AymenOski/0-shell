@@ -7,7 +7,6 @@ pub trait Command {
     
     fn name() -> &'static str;
     fn help() -> &'static str;
-    fn validate_args(args: &[&str]) -> bool;
 }
 
 // Implement all commands in these modules

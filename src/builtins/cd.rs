@@ -7,6 +7,10 @@ pub struct Cd;
 
 impl Command for Cd {
     fn execute(args: &[&str], state: &mut ShellState) -> Result<(), CommandError> {
+        if args.len() > 1 {
+            return Err(CommandError::InvalidArgs("too many arguments".to_string()));
+        }
+
         // If no arguments, default to HOME
         let target = if args.is_empty() {
             "~"  // Default to home directory
@@ -68,12 +72,6 @@ impl Command for Cd {
     
     fn help() -> &'static str {
         "cd: change directory"
-    }
-    
-    fn validate_args(args: &[&str]) -> bool {
-        // cd accepts 0 args (go to home) or 1 arg (go to specific path)
-        // Reject 2+ args: "cd /tmp /home" is invalid
-        args.len() <= 1
     }
 }
 

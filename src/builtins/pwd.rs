@@ -5,7 +5,10 @@ use crate::shell::state::ShellState;
 pub struct Pwd;
 
 impl Command for Pwd {
-    fn execute(_args: &[&str], state: &mut ShellState) -> Result<(), CommandError> {
+    fn execute(args: &[&str], state: &mut ShellState) -> Result<(), CommandError> {
+        if !args.is_empty() {
+            return Err(CommandError::InvalidArgs("too many arguments".to_string()));
+        }
         println!("{}", state.current_dir.display());
         Ok(())
     }
@@ -16,9 +19,5 @@ impl Command for Pwd {
     
     fn help() -> &'static str {
         "pwd: print working directory"
-    }
-    
-    fn validate_args(args: &[&str]) -> bool {
-        args.is_empty()
     }
 }
