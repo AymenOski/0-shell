@@ -98,23 +98,30 @@ pub fn start() {
         // Parse the input
         match parser::parse(trimmed_input) {
             Ok(cmd) => {
+                let cmd_name = cmd.name.clone();
                 // Dispatch to the right command
                 match dispatcher::dispatch(cmd, &mut state) {
                     Ok(_) => {},
                     Err(crate::CommandError::CommandNotFound(name)) => {
                         println!("{}Command '{}' not found{}", red, name, reset);
                     }
-                    Err(crate::CommandError::IsADirectory(path)) => {
-                        println!("{}cat: {}: Is a directory{}", red, path, reset);
+                    Err(crate::CommandError::FileNotFound(path)) => {
+                        println!("{}{}: {}: No such file or directory{}", red, cmd_name, path, reset);
                     }
                     Err(crate::CommandError::PermissionDenied(path)) => {
-                        println!("{}cat: {}: Permission denied{}", red, path, reset);
+                        println!("{}{}: {}: Permission denied{}", red, cmd_name, path, reset);
                     }
-                    Err(crate::CommandError::FileNotFound(path)) => {
-                        println!("{}cat: {}: No such file or directory{}", red, path, reset);
+                    Err(crate::CommandError::IsADirectory(path)) => {
+                        println!("{}{}: {}: Is a directory{}", red, cmd_name, path, reset);
+                    }
+                    Err(crate::CommandError::NotADirectory(path)) => {
+                        println!("{}{}: {}: Not a directory{}", red, cmd_name, path, reset);
+                    }
+                    Err(crate::CommandError::AlreadyExists(path)) => {
+                        println!("{}{}: cannot create directory '{}': File exists{}", red, cmd_name, path, reset);
                     }
                     Err(crate::CommandError::FileOperationFailed(msg)) => {
-                        println!("{}{}{}", red, msg, reset);
+                        println!("{}{}: {}{}", red, cmd_name, msg, reset);
                     }
                     Err(e) => println!("{}Error: {}{}", red, e, reset),
                 }

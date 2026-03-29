@@ -13,8 +13,9 @@ impl Command for Mkdir {
             let path = resolve_path(dir_name, state)?;
             
             // Try to create the directory
+            // Pass both the original name (for error messages) and resolved path (for fs operation)
             fs::create_dir(&path)
-                .map_err(|e| io_error_to_cmd_error(&path, e))?;
+                .map_err(|e| io_error_to_cmd_error(dir_name, &path, e))?;
         }
         
         Ok(())
@@ -56,17 +57,18 @@ fn resolve_path(dir_name: &str, state: &ShellState) -> Result<PathBuf, CommandEr
 }
 
 /// Convert io::Error to CommandError based on error kind
-fn io_error_to_cmd_error(path: &PathBuf, e: std::io::Error) -> CommandError {
+/// Takes both original_name (for error messages) and resolved path (for fs operations)
+fn io_error_to_cmd_error(original_name: &str, _path: &PathBuf, e: std::io::Error) -> CommandError {
     match e.kind() {
         std::io::ErrorKind::AlreadyExists => {
-            CommandError::FileOperationFailed(format!("mkdir: cannot create directory '{}': File exists", path.display()))
+            CommandError::AlreadyExists(original_name.to_string())
         }
         std::io::ErrorKind::PermissionDenied => {
-            CommandError::PermissionDenied(format!("{}", path.display()))
+            CommandError::PermissionDenied(original_name.to_string())
         }
         std::io::ErrorKind::NotFound => {
             // Parent directory doesn't exist
-            CommandError::FileOperationFailed(format!("mkdir: cannot create directory '{}': No such file or directory", path.display()))
+            CommandError::FileNotFound(original_name.to_string())
         }
         _ => {
             CommandError::IOError(e.to_string())

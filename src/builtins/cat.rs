@@ -17,7 +17,7 @@ impl Command for Cat {
             
             // Try to read the file
             let content = fs::read_to_string(&path)
-                .map_err(|e| io_error_to_cmd_error(&path, e))?;
+                .map_err(|e| io_error_to_cmd_error(file_path, &path, e))?;
             if args.len() == i {
                 println!("{}", content);
             }else {
@@ -42,16 +42,17 @@ impl Command for Cat {
 }
 
 /// Convert io::Error to CommandError based on error kind
-fn io_error_to_cmd_error(path: &std::path::PathBuf, e: std::io::Error) -> CommandError {
+/// Takes both original_path (for error messages) and resolved path (for fs operations)
+fn io_error_to_cmd_error(original_path: &str, _path: &std::path::PathBuf, e: std::io::Error) -> CommandError {
     match e.kind() {
         std::io::ErrorKind::NotFound => {
-            CommandError::FileNotFound(format!("{}", path.display()))
+            CommandError::FileNotFound(original_path.to_string())
         }
         std::io::ErrorKind::PermissionDenied => {
-            CommandError::PermissionDenied(format!("{}", path.display()))
+            CommandError::PermissionDenied(original_path.to_string())
         }
         std::io::ErrorKind::IsADirectory => {
-            CommandError::IsADirectory(format!("{}", path.display()))
+            CommandError::IsADirectory(original_path.to_string())
         }
         _ => {
             CommandError::IOError(e.to_string())

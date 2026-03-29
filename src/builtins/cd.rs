@@ -47,19 +47,14 @@ impl Command for Cd {
         // Canonicalize the path to resolve .. and .
         // This converts /home/user/target/.. into /home/user (resolved)
         let canonical_path = target_path.canonicalize()
-            .map_err(|e| CommandError::IOError(format!("Could not resolve path: {}", e)))?;
-        
-        // Check if it's actually a directory
-        if !canonical_path.is_dir() {
-            return Err(CommandError::InvalidArgs(format!("{} is not a directory", canonical_path.display())));
-        }
+            .map_err(|e| io_error_to_cmd_error(target, e))?;
         
         // **Store the current directory before changing** (for cd -)
         let previous_dir = state.current_dir.clone();
         
         // Tell the OS to actually change the working directory
         std::env::set_current_dir(&canonical_path)
-            .map_err(|e| CommandError::IOError(e.to_string()))?;
+            .map_err(|e| io_error_to_cmd_error(target, e))?;
         
         // Update our state to track both current and previous directory
         state.previous_dir = Some(previous_dir);
@@ -79,5 +74,23 @@ impl Command for Cd {
         // cd accepts 0 args (go to home) or 1 arg (go to specific path)
         // Reject 2+ args: "cd /tmp /home" is invalid
         args.len() <= 1
+    }
+}
+
+/// Convert io::Error to CommandError based on error kind
+fn io_error_to_cmd_error(target: &str, e: std::io::Error) -> CommandError {
+    match e.kind() {
+        std::io::ErrorKind::NotFound => {
+            CommandError::FileNotFound(target.to_string())
+        }
+        std::io::ErrorKind::PermissionDenied => {
+            CommandError::PermissionDenied(target.to_string())
+        }
+        std::io::ErrorKind::NotADirectory => {
+            CommandError::NotADirectory(target.to_string())
+        }
+        _ => {
+            CommandError::IOError(e.to_string())
+        }
     }
 }
