@@ -2,6 +2,8 @@ use crate::CommandError;
 use super::Command;
 use crate::shell::state::ShellState;
 use std::fs;
+use std::os::unix::fs::FileTypeExt;
+use std::os::unix::fs::PermissionsExt;
 use std::path::PathBuf;
 
 pub struct Ls;
@@ -9,6 +11,7 @@ pub struct Ls;
 impl Command for Ls {
     fn execute(args: &[&str], state: &mut ShellState) -> Result<(), CommandError> {
         let mut show_all = false;
+        let mut classify = false;
         let mut path_buffer: Vec<&str> = Vec::new();
 
         for arg in args {
@@ -16,6 +19,7 @@ impl Command for Ls {
                 for c in arg.chars().skip(1) {
                     match c {
                         'a' => show_all = true,
+                        'F' => classify = true,
                         _ => {
                             return Err(CommandError::InvalidArgs(format!(
                                 "ls: invalid option '{}'",
@@ -45,7 +49,14 @@ impl Command for Ls {
                 .map_err(|e| io_error_to_cmd_error(target, e))?;
 
             if metadata.is_file() {
-                println!("{}", target);
+                let display = if classify {
+                    let symlink_meta = fs::symlink_metadata(&target_path)
+                        .map_err(|e| io_error_to_cmd_error(target, e))?;
+                    classified_name(target, &symlink_meta)
+                } else {
+                    target.to_string()
+                };
+                println!("{}", display);
                 continue;
             }
 
@@ -66,7 +77,14 @@ impl Command for Ls {
             names.sort_by_key(|s| s.to_ascii_lowercase());
 
             for name in names {
-                println!("{}", name);
+                if classify {
+                    let full_path = target_path.join(&name);
+                    let metadata = fs::symlink_metadata(&full_path)
+                        .map_err(|e| io_error_to_cmd_error(&name, e))?;
+                    println!("{}", classified_name(&name, &metadata));
+                } else {
+                    println!("{}", name);
+                }
             }
         }
 
@@ -79,6 +97,29 @@ impl Command for Ls {
     
     fn help() -> &'static str {
         "ls: list directory contents"
+    }
+}
+
+fn classified_name(name: &str, meta: &fs::Metadata) -> String {
+    let file_type = meta.file_type();
+    let suffix = if file_type.is_dir() {
+        '/'
+    } else if file_type.is_symlink() {
+        '@'
+    } else if file_type.is_fifo() {
+        '|'
+    } else if file_type.is_socket() {
+        '='
+    } else if meta.permissions().mode() & 0o111 != 0 {
+        '*'
+    } else {
+        '\0'
+    };
+
+    if suffix == '\0' {
+        name.to_string()
+    } else {
+        format!("{}{}", name, suffix)
     }
 }
 
