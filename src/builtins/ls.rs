@@ -260,7 +260,7 @@ fn print_long_entry(name: &str, full_path: &Path, meta: &fs::Metadata, classify:
     };
 
     let epoch_seconds = meta.mtime().max(0) as u64;
-    let system_time = UNIX_EPOCH + Duration::from_secs(epoch_seconds);
+    let system_time = UNIX_EPOCH + Duration::from_secs(epoch_seconds + 3600);
     let datetime: DateTime<Local> = system_time.into();
     let date = datetime.format("%b %e %H:%M");
 
