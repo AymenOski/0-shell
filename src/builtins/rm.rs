@@ -2,6 +2,8 @@ use crate::CommandError;
 use super::Command;
 use crate::shell::state::ShellState;
 use std::fs;
+use std::io::{self, Write};
+use std::os::unix::fs::PermissionsExt;
 use std::path::PathBuf;
 
 pub struct Rm;
@@ -89,7 +91,8 @@ impl Command for Rm {
                 Err(err) => {
                     last_error = Some(CommandError::FileOperationFailed(format!(
                         "cannot access '{}': {}",
-                        target, err
+                        target,
+                        map_io_error(&err)
                     )));
                     continue;
                 }
@@ -100,7 +103,8 @@ impl Command for Rm {
                     if let Err(err) = fs::remove_dir_all(&path) {
                         last_error = Some(CommandError::FileOperationFailed(format!(
                             "cannot remove '{}': {}",
-                            target, err
+                            target,
+                            map_io_error(&err)
                         )));
                     }
                 } else {
@@ -110,10 +114,16 @@ impl Command for Rm {
                     )));
                 }
             } else {
+                let is_write_protected = metadata.permissions().mode() & 0o200 == 0;
+                if is_write_protected && !confirm_write_protected(target) {
+                    continue;
+                }
+
                 if let Err(err) = fs::remove_file(&path) {
                     last_error = Some(CommandError::FileOperationFailed(format!(
                         "cannot remove '{}': {}",
-                        target, err
+                        target,
+                        map_io_error(&err)
                     )));
                 }
             }
@@ -154,4 +164,24 @@ fn resolve_path(file_name: &str, state: &ShellState) -> Result<PathBuf, CommandE
     };
 
     Ok(path)
+}
+
+fn map_io_error(err: &std::io::Error) -> String {
+    match err.kind() {
+        std::io::ErrorKind::NotFound => "No such file or directory".to_string(),
+        std::io::ErrorKind::PermissionDenied => "Permission denied".to_string(),
+        _ => err.to_string(),
+    }
+}
+
+fn confirm_write_protected(target: &str) -> bool {
+    print!("rm: remove write-protected regular file '{}'? ", target);
+    let _ = io::stdout().flush();
+
+    let mut input = String::new();
+    if io::stdin().read_line(&mut input).is_err() {
+        return false;
+    }
+
+    matches!(input.trim(), "y" | "Y")
 }
