@@ -172,7 +172,21 @@ fn widths_for_entries(entries: &[(String, fs::Metadata)]) -> Widths {
             .unwrap_or(meta.gid().to_string());
         widths.group = widths.group.max(group.len());
 
-        widths.size = widths.size.max(meta.len().to_string().len());
+        let file_type = meta.file_type();
+        let size_display = if file_type.is_block_device() || file_type.is_char_device() {
+            let dev = meta.rdev();
+            if dev != 0 {
+                let major = libc::major(dev);
+                let minor = libc::minor(dev);
+                format!("{}, {}", major, minor)
+            } else {
+                String::new()
+            }
+        } else {
+            meta.len().to_string()
+        };
+
+        widths.size = widths.size.max(size_display.len());
     }
 
     widths
@@ -218,7 +232,18 @@ fn print_long_entry(name: &str, full_path: &Path, meta: &fs::Metadata, classify:
     let group = users::get_group_by_gid(meta.gid())
         .map(|g| g.name().to_string_lossy().to_string())
         .unwrap_or(meta.gid().to_string());
-    let size = meta.len();
+    let size = if file_type.is_block_device() || file_type.is_char_device() {
+        let dev = meta.rdev();
+        if dev != 0 {
+            let major = libc::major(dev);
+            let minor = libc::minor(dev);
+            format!("{}, {}", major, minor)
+        } else {
+            String::new()
+        }
+    } else {
+        meta.len().to_string()
+    };
 
     let epoch_seconds = meta.mtime().max(0) as u64;
     let system_time = UNIX_EPOCH + Duration::from_secs(epoch_seconds);
