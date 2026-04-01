@@ -1,8 +1,8 @@
 use crate::CommandError;
 use super::Command;
 use crate::shell::state::ShellState;
-use std::fs;
-use std::io::{self, BufRead};
+use std::fs::File;
+use std::io::{self, Write};
 use std::path::PathBuf;
 
 pub struct Cat;
@@ -11,31 +11,33 @@ impl Command for Cat {
     fn execute(args: &[&str], state: &mut ShellState) -> Result<(), CommandError> {
         if args.is_empty() {
             let stdin = io::stdin();
-            for line in stdin.lock().lines() {
-                match line {
-                    Ok(l) => println!("{}", l),
-                    Err(e) => return Err(CommandError::IOError(e.to_string())),
-                }
-            }
+            let mut stdin_lock = stdin.lock();
+            let stdout = io::stdout();
+            let mut stdout_lock = stdout.lock();
+            io::copy(&mut stdin_lock, &mut stdout_lock)
+                .map_err(|e| CommandError::IOError(e.to_string()))?;
             return Ok(());
         }
 
-        let mut i = 0;
+        let stdout = io::stdout();
+        let mut stdout_lock = stdout.lock();
+
         // Loop through each file argument
         for file_path in args {
-            i += 1;
             // Resolve the path: handle ~, absolute paths, and relative paths
             let path = resolve_path(file_path, state)?;
             
-            // Try to read the file
-            let content = fs::read_to_string(&path)
+            // Open and stream file as raw bytes
+            let mut file = File::open(&path)
                 .map_err(|e| io_error_to_cmd_error(file_path, &path, e))?;
-            if args.len() == i {
-                println!("{}", content);
-            }else {
-                print!("{}", content);
-            }
+
+            io::copy(&mut file, &mut stdout_lock)
+                .map_err(|e| CommandError::IOError(e.to_string()))?;
         }
+
+        stdout_lock
+            .flush()
+            .map_err(|e| CommandError::IOError(e.to_string()))?;
         
         Ok(())
     }
