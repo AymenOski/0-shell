@@ -12,6 +12,7 @@ pub fn dispatch(cmd: Command, state: &mut ShellState) -> Result<(), CommandError
         "echo" => builtins::echo::Echo::execute(&args, state),
         "cat" => builtins::cat::Cat::execute(&args, state),
         "cd" => builtins::cd::Cd::execute(&args, state),
+        "clear" => builtins::clear::Clear::execute(&args, state),
         "cp" => builtins::cp::Cp::execute(&args, state),
         "exit" => builtins::exit::Exit::execute(&args, state),
         "ls" => builtins::ls::Ls::execute(&args, state),

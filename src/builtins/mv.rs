@@ -32,16 +32,17 @@ impl Command for Mv {
                 };
 
                 let dest_file = dest.join(name);
-                return move_one(&source, &dest_file);
+                let dest_display = join_display_path(dest_name, name);
+                return move_one(&source, &dest_file, src_name, &dest_display);
             }
 
-            return move_one(&source, &dest);
+            return move_one(&source, &dest, src_name, dest_name);
         }
 
         if !dest.is_dir() {
             return Err(CommandError::FileOperationFailed(format!(
                 "target '{}' is not a directory",
-                dest.display()
+                dest_name
             )));
         }
 
@@ -59,8 +60,9 @@ impl Command for Mv {
             };
 
             let dest_file = dest.join(name);
+            let dest_display = join_display_path(dest_name, name);
 
-            if let Err(err) = move_one(&source, &dest_file) {
+            if let Err(err) = move_one(&source, &dest_file, src_name, &dest_display) {
                 last_error = Some(err);
             }
         }
@@ -104,18 +106,26 @@ fn resolve_path(file_name: &str, state: &ShellState) -> Result<PathBuf, CommandE
     Ok(path)
 }
 
-fn move_one(source: &Path, dest: &Path) -> Result<(), CommandError> {
+fn move_one(source: &Path, dest: &Path, source_display: &str, dest_display: &str) -> Result<(), CommandError> {
     if !source.exists() {
         return Err(CommandError::FileOperationFailed(format!(
             "cannot stat '{}': No such file or directory",
-            source.display()
+            source_display
+        )));
+    }
+
+    if source.is_dir() && dest != source && dest.starts_with(source) {
+        return Err(CommandError::FileOperationFailed(format!(
+            "cannot move '{}' to a subdirectory of itself, '{}'",
+            source_display,
+            dest_display
         )));
     }
 
     if dest.exists() && dest.is_dir() && !source.is_dir() {
         return Err(CommandError::FileOperationFailed(format!(
             "cannot overwrite directory '{}' with non-directory",
-            dest.display()
+            dest_display
         )));
     }
 
@@ -123,7 +133,7 @@ fn move_one(source: &Path, dest: &Path) -> Result<(), CommandError> {
         fs::remove_file(dest).map_err(|e| {
             CommandError::FileOperationFailed(format!(
                 "cannot remove '{}': {}",
-                dest.display(),
+                dest_display,
                 e
             ))
         })?;
@@ -132,11 +142,15 @@ fn move_one(source: &Path, dest: &Path) -> Result<(), CommandError> {
     fs::rename(source, dest).map_err(|e| {
         CommandError::FileOperationFailed(format!(
             "cannot move '{}' to '{}': {}",
-            source.display(),
-            dest.display(),
+            source_display,
+            dest_display,
             e
         ))
     })?;
 
     Ok(())
+}
+
+fn join_display_path(base: &str, child: &std::ffi::OsStr) -> String {
+    Path::new(base).join(child).display().to_string()
 }

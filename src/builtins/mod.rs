@@ -13,6 +13,7 @@ pub trait Command {
 pub mod echo;
 pub mod cat;
 pub mod cd;
+pub mod clear;
 pub mod cp;
 pub mod exit;
 pub mod ls;
