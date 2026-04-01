@@ -16,6 +16,9 @@ struct Widths {
     links: usize,
     user: usize,
     group: usize,
+    dev_major: usize,
+    dev_minor: usize,
+    has_device: bool,
     size: usize,
 }
 
@@ -158,6 +161,7 @@ impl Command for Ls {
 
 fn widths_for_entries(entries: &[(String, fs::Metadata)]) -> Widths {
     let mut widths = Widths::default();
+    let mut regular_size_width = 0;
 
     for (_, meta) in entries {
         widths.links = widths.links.max(meta.nlink().to_string().len());
@@ -173,21 +177,26 @@ fn widths_for_entries(entries: &[(String, fs::Metadata)]) -> Widths {
         widths.group = widths.group.max(group.len());
 
         let file_type = meta.file_type();
-        let size_display = if file_type.is_block_device() || file_type.is_char_device() {
+        if file_type.is_block_device() || file_type.is_char_device() {
             let dev = meta.rdev();
             if dev != 0 {
                 let major = libc::major(dev);
                 let minor = libc::minor(dev);
-                format!("{}, {}", major, minor)
-            } else {
-                String::new()
+                widths.has_device = true;
+                widths.dev_major = widths.dev_major.max(major.to_string().len());
+                widths.dev_minor = widths.dev_minor.max(minor.to_string().len());
             }
         } else {
-            meta.len().to_string()
-        };
-
-        widths.size = widths.size.max(size_display.len());
+            regular_size_width = regular_size_width.max(meta.len().to_string().len());
+        }
     }
+
+    let device_size_width = if widths.has_device {
+        widths.dev_major + 2 + widths.dev_minor
+    } else {
+        0
+    };
+    widths.size = regular_size_width.max(device_size_width);
 
     widths
 }
@@ -237,12 +246,19 @@ fn print_long_entry(name: &str, full_path: &Path, meta: &fs::Metadata, classify:
         if dev != 0 {
             let major = libc::major(dev);
             let minor = libc::minor(dev);
-            format!("{}, {}", major, minor)
+            let device = format!(
+                "{:>major_w$}, {:>minor_w$}",
+                major,
+                minor,
+                major_w = widths.dev_major,
+                minor_w = widths.dev_minor,
+            );
+            format!("{:>size_w$}", device, size_w = widths.size)
         } else {
             String::new()
         }
     } else {
-        meta.len().to_string()
+        format!("{:>size_w$}", meta.len(), size_w = widths.size)
     };
 
     let epoch_seconds = meta.mtime().max(0) as u64;
@@ -263,7 +279,7 @@ fn print_long_entry(name: &str, full_path: &Path, meta: &fs::Metadata, classify:
     }
 
     println!(
-        "{}{} {:>links$} {:<user$} {:<group$} {:>size_w$} {} {}",
+        "{}{} {:>links$} {:<user$} {:<group$} {} {} {}",
         kind,
         perms,
         links,
@@ -275,7 +291,6 @@ fn print_long_entry(name: &str, full_path: &Path, meta: &fs::Metadata, classify:
         links = widths.links,
         user = widths.user,
         group = widths.group,
-        size_w = widths.size,
     );
 }
 
