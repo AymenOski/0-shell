@@ -13,43 +13,114 @@ impl Command for Rm {
         }
 
         let mut recursive = false;
-        let mut targets: Vec<&str> = Vec::new();
+        let mut paths: Vec<&str> = Vec::new();
 
-        for arg in args {
-            if *arg == "-r" || *arg == "-R" {
-                recursive = true;
-            } else if arg.starts_with('-') && *arg != "-" {
-                return Err(CommandError::InvalidArgs(format!(
-                    "invalid option -- '{}'",
-                    arg.trim_start_matches('-')
-                )));
-            } else {
-                targets.push(*arg);
+        let limiter_idx = args.iter().position(|val| *val == "--");
+
+        let options_slice = if let Some(idx) = limiter_idx {
+            paths.extend_from_slice(&args[idx + 1..]);
+            &args[..idx]
+        } else {
+            args
+        };
+
+        for operand in options_slice {
+            match *operand {
+                "-r" | "-R" => recursive = true,
+                "---" => (),
+                _ => {
+                    if *operand != "-" && operand.starts_with('-') {
+                        for ch in operand[1..].chars() {
+                            if ch == '-' {
+                                return Err(CommandError::InvalidArgs(format!(
+                                    "unrecognized option '{}'",
+                                    operand
+                                )));
+                            } else if ch != 'r' && ch != 'R' {
+                                return Err(CommandError::InvalidArgs(format!(
+                                    "invalid option -- '{}'",
+                                    ch
+                                )));
+                            } else {
+                                recursive = true;
+                            }
+                        }
+                    } else {
+                        paths.push(*operand);
+                    }
+                }
             }
         }
 
-        if targets.is_empty() {
+        if paths.is_empty() {
             return Err(CommandError::InvalidArgs("missing operand".to_string()));
         }
 
-        for target in targets {
+        let mut last_error: Option<CommandError> = None;
+
+        for target in paths {
+            if target == "."
+                || target == ".."
+                || target == "/"
+                || target.ends_with("/.")
+                || target.ends_with("/..")
+                || target.ends_with("/./")
+                || target.ends_with("/../")
+            {
+                last_error = Some(CommandError::FileOperationFailed(format!(
+                    "refusing to remove '{}' directory",
+                    target
+                )));
+                continue;
+            }
+
             let path = resolve_path(target, _state)?;
-            let metadata = fs::metadata(&path)
-                .map_err(|e| io_error_to_cmd_error(target, e))?;
+
+            if !path.exists() {
+                last_error = Some(CommandError::FileOperationFailed(format!(
+                    "cannot remove '{}': No such file or directory",
+                    target
+                )));
+                continue;
+            }
+
+            let metadata = match path.symlink_metadata() {
+                Ok(m) => m,
+                Err(err) => {
+                    last_error = Some(CommandError::FileOperationFailed(format!(
+                        "cannot access '{}': {}",
+                        target, err
+                    )));
+                    continue;
+                }
+            };
 
             if metadata.is_dir() {
                 if recursive {
-                    fs::remove_dir_all(&path)
-                        .map_err(|e| io_error_to_cmd_error(target, e))?;
+                    if let Err(err) = fs::remove_dir_all(&path) {
+                        last_error = Some(CommandError::FileOperationFailed(format!(
+                            "cannot remove '{}': {}",
+                            target, err
+                        )));
+                    }
                 } else {
-                    return Err(CommandError::FileOperationFailed(
-                        format!("cannot remove '{}': Is a directory", target)
-                    ));
+                    last_error = Some(CommandError::FileOperationFailed(format!(
+                        "cannot remove '{}': Is a directory",
+                        target
+                    )));
                 }
             } else {
-                fs::remove_file(&path)
-                    .map_err(|e| io_error_to_cmd_error(target, e))?;
+                if let Err(err) = fs::remove_file(&path) {
+                    last_error = Some(CommandError::FileOperationFailed(format!(
+                        "cannot remove '{}': {}",
+                        target, err
+                    )));
+                }
             }
+        }
+
+        if let Some(err) = last_error {
+            return Err(err);
         }
 
         Ok(())
@@ -83,16 +154,4 @@ fn resolve_path(file_name: &str, state: &ShellState) -> Result<PathBuf, CommandE
     };
 
     Ok(path)
-}
-
-fn io_error_to_cmd_error(target: &str, e: std::io::Error) -> CommandError {
-    match e.kind() {
-        std::io::ErrorKind::NotFound => CommandError::FileOperationFailed(
-            format!("cannot remove '{}': No such file or directory", target)
-        ),
-        std::io::ErrorKind::PermissionDenied => CommandError::FileOperationFailed(
-            format!("cannot remove '{}': Permission denied", target)
-        ),
-        _ => CommandError::IOError(e.to_string()),
-    }
 }
