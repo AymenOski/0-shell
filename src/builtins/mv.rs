@@ -2,7 +2,7 @@ use crate::CommandError;
 use super::Command;
 use crate::shell::state::ShellState;
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 pub struct Mv;
 
@@ -15,33 +15,60 @@ impl Command for Mv {
             return Err(CommandError::InvalidArgs(format!("missing destination file operand after '{}'", args[0])));
         }
 
-        let src_name = args[0];
-        let dest_name = args[1];
-        
-        let src = resolve_path(src_name, state)?;
-        let mut dest = resolve_path(dest_name, state)?;
-        
-        if src == dest {
-            return Err(CommandError::FileOperationFailed(
-                format!("'{}' and '{}' are the same file", src_name, dest_name)
-            ));
+        let dest_name = args[args.len() - 1];
+        let sources = &args[..args.len() - 1];
+        let dest = resolve_path(dest_name, state)?;
+
+        if sources.len() == 1 {
+            let src_name = sources[0];
+            let source = resolve_path(src_name, state)?;
+
+            if dest.is_dir() {
+                let Some(name) = source.file_name() else {
+                    return Err(CommandError::FileOperationFailed(format!(
+                        "invalid source path '{}'",
+                        source.display()
+                    )));
+                };
+
+                let dest_file = dest.join(name);
+                return move_one(&source, &dest_file);
+            }
+
+            return move_one(&source, &dest);
         }
-        
-        if dest.is_dir() {
-            if let Some(file_name) = src.file_name() {
-                dest = dest.join(file_name);
-                
-                if src == dest {
-                    return Err(CommandError::FileOperationFailed(
-                        format!("cannot move '{}' to a subdirectory of itself, '{}'", src_name, dest.display())
-                    ));
-                }
+
+        if !dest.is_dir() {
+            return Err(CommandError::FileOperationFailed(format!(
+                "target '{}' is not a directory",
+                dest.display()
+            )));
+        }
+
+        let mut last_error: Option<CommandError> = None;
+
+        for src_name in sources {
+            let source = resolve_path(src_name, state)?;
+
+            let Some(name) = source.file_name() else {
+                last_error = Some(CommandError::FileOperationFailed(format!(
+                    "invalid source path '{}'",
+                    source.display()
+                )));
+                continue;
+            };
+
+            let dest_file = dest.join(name);
+
+            if let Err(err) = move_one(&source, &dest_file) {
+                last_error = Some(err);
             }
         }
-        
-        fs::rename(&src, &dest)
-            .map_err(|e| io_error_to_cmd_error(src_name, e))?;
-        
+
+        if let Some(err) = last_error {
+            return Err(err);
+        }
+
         Ok(())
     }
     
@@ -77,18 +104,39 @@ fn resolve_path(file_name: &str, state: &ShellState) -> Result<PathBuf, CommandE
     Ok(path)
 }
 
-// Convert standard IO errors into our centralized CommandError format
-fn io_error_to_cmd_error(src_name: &str, e: std::io::Error) -> CommandError {
-    match e.kind() {
-        std::io::ErrorKind::NotFound => {
-            CommandError::FileOperationFailed(format!("cannot stat '{}': No such file or directory", src_name))
-        }
-        std::io::ErrorKind::PermissionDenied => {
-            CommandError::PermissionDenied(src_name.to_string())
-        }
-        _ => {
-            // Using FileOperationFailed allows the REPL to format it cleanly as `mv: {msg}` without "IO error:"
-            CommandError::FileOperationFailed(format!("cannot move '{}': {}", src_name, e))
-        }
+fn move_one(source: &Path, dest: &Path) -> Result<(), CommandError> {
+    if !source.exists() {
+        return Err(CommandError::FileOperationFailed(format!(
+            "cannot stat '{}': No such file or directory",
+            source.display()
+        )));
     }
+
+    if dest.exists() && dest.is_dir() && !source.is_dir() {
+        return Err(CommandError::FileOperationFailed(format!(
+            "cannot overwrite directory '{}' with non-directory",
+            dest.display()
+        )));
+    }
+
+    if dest.exists() && !dest.is_dir() {
+        fs::remove_file(dest).map_err(|e| {
+            CommandError::FileOperationFailed(format!(
+                "cannot remove '{}': {}",
+                dest.display(),
+                e
+            ))
+        })?;
+    }
+
+    fs::rename(source, dest).map_err(|e| {
+        CommandError::FileOperationFailed(format!(
+            "cannot move '{}' to '{}': {}",
+            source.display(),
+            dest.display(),
+            e
+        ))
+    })?;
+
+    Ok(())
 }
