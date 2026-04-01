@@ -57,8 +57,8 @@ fn tokenize(input: &str) -> Result<Vec<String>, CommandError> {
             '\\' if in_double_quote => {
                 // Peek at next char
                 if let Some(&next_ch) = chars.peek() {
-                    if next_ch == '"' {
-                        // Consume the quote after backslash
+                    if next_ch == '"' || next_ch == '\\' {
+                        // Consume the escaped char after backslash
                         current_token.push(chars.next().unwrap());
                         continue;
                     }

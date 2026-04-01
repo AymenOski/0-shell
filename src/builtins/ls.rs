@@ -101,11 +101,9 @@ impl Command for Ls {
             }
 
             entries.sort_by(|(a, _), (b, _)| {
-                let a_lower = a.to_ascii_lowercase();
-                let b_lower = b.to_ascii_lowercase();
-                let a_clean = a_lower.trim_start_matches('.');
-                let b_clean = b_lower.trim_start_matches('.');
-                a_clean.cmp(b_clean)
+                let a_lower = a.to_lowercase();
+                let b_lower = b.to_lowercase();
+                a_lower.cmp(&b_lower)
             });
 
             let mut visible_entries: Vec<(String, fs::Metadata)> = Vec::new();
