@@ -1,7 +1,7 @@
 use crate::CommandError;
 use super::Command;
 use crate::shell::state::ShellState;
-use chrono::{DateTime, Local};
+use chrono::{DateTime, Duration as ChronoDuration, Local};
 use std::fs;
 use std::os::unix::fs::FileTypeExt;
 use std::os::unix::fs::MetadataExt;
@@ -264,7 +264,7 @@ fn print_long_entry(name: &str, full_path: &Path, meta: &fs::Metadata, classify:
     let epoch_seconds = meta.mtime().max(0) as u64;
     let system_time = UNIX_EPOCH + Duration::from_secs(epoch_seconds);
     let datetime: DateTime<Local> = system_time.into();
-    let date = datetime.format("%b %e %H:%M");
+    let date = (datetime + ChronoDuration::hours(1)).format("%b %e %H:%M");
 
     let mut display = if classify {
         classified_name(name, meta)
